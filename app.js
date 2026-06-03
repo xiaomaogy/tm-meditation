@@ -38,7 +38,7 @@ const App = {
                 <div class="fill-wrap" id="fill">${WAVE}<div class="fill-solid"></div></div>
                 <div class="idle-ui" id="idle">
                     <div class="top-row">
-                        <div style="font-size:10px;color:#ccc;">v12</div>
+                        <div style="font-size:10px;color:#ccc;">v13</div>
                         <button class="gear-btn" id="gear">⚙</button>
                     </div>
                     <div class="mid-row">
@@ -187,43 +187,44 @@ const App = {
         this.renderIdle();
     },
 
+    phaseOutStartedAt: 0,
+
     tick() {
         const elapsed = Date.now() - this.startedAt;
-        const totalMs = this.meditationMs + this.phaseOutMs;
 
         if (elapsed < this.meditationMs) {
-            // Still meditating — update fill
+            // Still meditating — fill from top
             const pct = elapsed / this.meditationMs;
             const fill = document.getElementById('fill');
             if (fill) fill.style.height = `${Math.min(pct * 100, 100)}%`;
 
-        } else if (elapsed < totalMs) {
-            // Phase out period
-            if (this.state === 'running') {
-                this.state = 'phaseout';
-                this.playChime();
-                if (!this.sessionSaved) {
-                    this.sessionSaved = true;
-                    this.addSession(this.mins * 60);
-                }
-                const fill = document.getElementById('fill');
-                if (fill) {
-                    fill.style.height = '100%';
-                    const wave = fill.querySelector('.fill-wave');
-                    if (wave) wave.style.display = 'none';
-                }
-            }
-
-        } else {
-            // Phase out done
-            clearInterval(this.timer);
-            this.releaseWakeLock();
+        } else if (this.state === 'running') {
+            // Meditation just ended — transition to phase out
+            this.state = 'phaseout';
+            this.phaseOutStartedAt = Date.now();
+            this.playChime();
             if (!this.sessionSaved) {
                 this.sessionSaved = true;
                 this.addSession(this.mins * 60);
             }
-            this.playChime();
-            this.showFeedback();
+            // Reset fill to 0 for phase out animation
+            const fill = document.getElementById('fill');
+            if (fill) fill.style.height = '0%';
+
+        } else if (this.state === 'phaseout') {
+            const poElapsed = Date.now() - this.phaseOutStartedAt;
+            if (poElapsed < this.phaseOutMs) {
+                // Phase out — fill again from top over 3 minutes
+                const pct = poElapsed / this.phaseOutMs;
+                const fill = document.getElementById('fill');
+                if (fill) fill.style.height = `${Math.min(pct * 100, 100)}%`;
+            } else {
+                // Phase out done
+                clearInterval(this.timer);
+                this.releaseWakeLock();
+                this.playChime();
+                this.showFeedback();
+            }
         }
     },
 
