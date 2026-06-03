@@ -38,7 +38,7 @@ const App = {
                 <div class="fill-wrap" id="fill">${WAVE}<div class="fill-solid"></div></div>
                 <div class="idle-ui" id="idle">
                     <div class="top-row">
-                        <div style="font-size:10px;color:#ccc;">v14</div>
+                        <div style="font-size:10px;color:#ccc;">v15</div>
                         <button class="gear-btn" id="gear">⚙</button>
                     </div>
                     <div class="mid-row">
@@ -234,7 +234,7 @@ const App = {
     showFeedback() {
         this.state = 'feedback';
         document.getElementById('timer-tab').innerHTML = `
-            <div class="timer-page" style="display:flex;align-items:center;justify-content:center;">
+            <div class="feedback-page">
                 <div style="text-align:center;padding:0 40px;">
                     <div style="font-size:24px;font-weight:600;margin-bottom:32px;color:#2c2c2c;">Did you feel it was easy?</div>
                     <div style="display:flex;gap:20px;justify-content:center;">
