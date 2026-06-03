@@ -6,16 +6,16 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="TM">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#FBF8F0">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <title>TM</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-        :root { --gold:#FFC436; --safe-top:env(safe-area-inset-top); --safe-bottom:env(safe-area-inset-bottom); }
+        :root { --gold:#FFC436; --fill-top:#F5D882; --fill-bot:#FBF8F0; --safe-top:env(safe-area-inset-top); --safe-bottom:env(safe-area-inset-bottom); }
         html, body { height:100%; overflow:hidden; }
-        body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif; background:#fff; color:#2c2c2c; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif; background:var(--fill-bot); color:#2c2c2c; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
 
         #app { display:flex; flex-direction:column; height:100dvh; }
         #tab-content { flex:1; overflow:hidden; position:relative; }
@@ -23,22 +23,22 @@
         .tab-panel.active { display:block; height:100%; }
 
         /* Tab bar */
-        #tab-bar { display:flex; justify-content:space-around; padding:10px 0 calc(var(--safe-bottom) + 6px); background:#fff; border-top:1px solid #eee; }
+        #tab-bar { display:flex; justify-content:space-around; padding:10px 0 calc(var(--safe-bottom) + 6px); background:var(--fill-bot); border-top:1px solid #e8e4d8; }
         .tab-btn { background:none; border:none; color:#999; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:10px; cursor:pointer; }
         .tab-btn.active { color:var(--gold); }
         .tab-btn svg { width:22px; height:22px; }
 
         /* === TIMER PAGE === */
-        .timer-page { position:relative; width:100%; height:100%; overflow:hidden; background:#fff; }
+        .timer-page { position:relative; width:100%; height:100%; overflow:hidden; background:var(--fill-bot); }
 
         /* Gold fill */
         .fill-wrap { position:absolute; top:0; left:0; right:0; height:0%; z-index:1; pointer-events:none; }
-        .fill-solid { width:100%; height:100%; background:var(--gold); }
-        .fill-wave { position:absolute; bottom:-24px; left:0; width:200%; height:25px; }
-        .fill-wave path { fill:var(--gold); }
+        .fill-solid { width:100%; height:100%; background:var(--fill-top); }
+        .fill-wave { position:absolute; bottom:-49px; left:0; width:100%; height:50px; }
+        .fill-wave path { fill:var(--fill-top); }
 
-        @keyframes drift { 0%{transform:translateX(0)} 50%{transform:translateX(-50%)} 100%{transform:translateX(0)} }
-        .fill-wave { animation: drift 5s ease-in-out infinite; }
+        @keyframes sway { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(.7)} }
+        .fill-wave { animation: sway 6s ease-in-out infinite; transform-origin: top; }
 
         /* Idle UI */
         .idle-ui { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; padding:calc(var(--safe-top) + 20px) 24px calc(var(--safe-bottom) + 20px); }

@@ -1,5 +1,5 @@
-const WAVE = `<svg class="fill-wave" viewBox="0 0 1440 25" preserveAspectRatio="none">
-<path d="M0,12 C120,25 240,0 360,12 C480,25 600,0 720,12 C840,25 960,0 1080,12 C1200,25 1320,0 1440,12 L1440,0 L0,0 Z"/>
+const WAVE = `<svg class="fill-wave" viewBox="0 0 400 50" preserveAspectRatio="none">
+<path d="M0,0 L0,15 Q200,50 400,15 L400,0 Z"/>
 </svg>`;
 
 const App = {
