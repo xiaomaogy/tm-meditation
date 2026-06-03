@@ -327,4 +327,14 @@ const App = {
 };
 
 document.addEventListener('DOMContentLoaded', () => App.init());
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            nw.addEventListener('statechange', () => {
+                if (nw.state === 'activated') location.reload();
+            });
+        });
+        reg.update();
+    });
+}
