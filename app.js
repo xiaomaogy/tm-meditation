@@ -4,9 +4,12 @@ const WAVE = `<svg class="fill-wave" viewBox="0 0 400 50" preserveAspectRatio="n
 
 const App = {
     state: 'idle',
-    secs: 20 * 60,
     mins: 20,
     timer: null,
+    startedAt: 0,
+    meditationMs: 0,
+    phaseOutMs: 3 * 60 * 1000,
+    sessionSaved: false,
     sessions: JSON.parse(localStorage.getItem('tm_sessions') || '[]'),
     month: new Date(),
 
@@ -16,12 +19,16 @@ const App = {
         this.bindTabs();
     },
 
-    save() { localStorage.setItem('tm_sessions', JSON.stringify(this.sessions)); },
+    save() {
+        try { localStorage.setItem('tm_sessions', JSON.stringify(this.sessions)); } catch(e) {}
+    },
 
     addSession(dur) {
-        this.sessions.push({ id: crypto.randomUUID(), date: new Date().toISOString(), duration: dur });
-        this.save();
-        this.renderStats();
+        try {
+            this.sessions.push({ id: crypto.randomUUID(), date: new Date().toISOString(), duration: dur });
+            this.save();
+            this.renderStats();
+        } catch(e) {}
     },
 
     // ====== TIMER ======
@@ -90,7 +97,6 @@ const App = {
         };
         document.getElementById('conf-quit').onclick = (e) => {
             e.stopPropagation();
-            clearInterval(this.phaseOutTimer);
             this.stop();
         };
     },
@@ -117,7 +123,6 @@ const App = {
             const picker = document.getElementById('picker');
             picker.classList.add('open');
             const list = document.getElementById('scroll-list');
-            // 80px top spacer, each item 40px, visible area 200px, center at 100px
             list.scrollTop = (this.mins - 1) * 40;
             this.updateScrollHighlight();
             list.addEventListener('scroll', () => this.updateScrollHighlight());
@@ -126,7 +131,6 @@ const App = {
             const list = document.getElementById('scroll-list');
             const idx = Math.round(list.scrollTop / 40);
             this.mins = Math.max(1, Math.min(60, idx + 1));
-            this.secs = this.mins * 60;
             document.getElementById('picker').classList.remove('open');
             this.renderIdle();
         };
@@ -143,7 +147,6 @@ const App = {
     updateScrollHighlight() {
         const list = document.getElementById('scroll-list');
         if (!list) return;
-        // 80px spacer + scrollTop puts us at the right item
         const centerIdx = Math.round(list.scrollTop / 40);
         list.querySelectorAll('.scroll-item').forEach((el, i) => {
             el.classList.toggle('active', i === centerIdx);
@@ -161,59 +164,68 @@ const App = {
     },
 
     releaseWakeLock() {
-        if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
+        try { if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; } } catch(e) {}
     },
 
     start() {
         this.state = 'running';
-        this.secs = this.mins * 60;
+        this.startedAt = Date.now();
+        this.meditationMs = this.mins * 60 * 1000;
+        this.sessionSaved = false;
         this.acquireWakeLock();
         this.playChime();
         this.renderRunning();
         this.updateFill();
-        this.timer = setInterval(() => this.tick(), 1000);
+        this.timer = setInterval(() => this.tick(), 500);
     },
 
     stop() {
         clearInterval(this.timer);
-        clearInterval(this.phaseOutTimer);
         this.releaseWakeLock();
         this.state = 'idle';
-        this.secs = this.mins * 60;
         document.getElementById('tab-bar').style.display = '';
         this.renderIdle();
     },
 
     tick() {
-        if (this.secs > 0) {
-            this.secs--;
-            this.updateFill();
-        } else if (this.state === 'running') {
-            // Meditation done — transition to phase out
-            this.state = 'phaseout';
-            this.playChime();
-            this.addSession(this.mins * 60);
-            this.phaseOutSecs = 3 * 60;
+        const elapsed = Date.now() - this.startedAt;
+        const totalMs = this.meditationMs + this.phaseOutMs;
 
+        if (elapsed < this.meditationMs) {
+            // Still meditating — update fill
+            const pct = elapsed / this.meditationMs;
             const fill = document.getElementById('fill');
-            if (fill) {
-                fill.style.height = '100%';
-                const wave = fill.querySelector('.fill-wave');
-                if (wave) wave.style.display = 'none';
-            }
-        } else if (this.state === 'phaseout') {
-            if (this.phaseOutSecs > 0) {
-                this.phaseOutSecs--;
-            } else {
-                clearInterval(this.timer);
-                this.releaseWakeLock();
+            if (fill) fill.style.height = `${Math.min(pct * 100, 100)}%`;
+
+        } else if (elapsed < totalMs) {
+            // Phase out period
+            if (this.state === 'running') {
+                this.state = 'phaseout';
                 this.playChime();
-                this.showFeedback();
+                if (!this.sessionSaved) {
+                    this.sessionSaved = true;
+                    this.addSession(this.mins * 60);
+                }
+                const fill = document.getElementById('fill');
+                if (fill) {
+                    fill.style.height = '100%';
+                    const wave = fill.querySelector('.fill-wave');
+                    if (wave) wave.style.display = 'none';
+                }
             }
+
+        } else {
+            // Phase out done
+            clearInterval(this.timer);
+            this.releaseWakeLock();
+            if (!this.sessionSaved) {
+                this.sessionSaved = true;
+                this.addSession(this.mins * 60);
+            }
+            this.playChime();
+            this.showFeedback();
         }
     },
-
-    phaseOutSecs: 0,
 
     showFeedback() {
         this.state = 'feedback';
@@ -235,7 +247,6 @@ const App = {
         const last = this.sessions[this.sessions.length - 1];
         if (last) { last.easy = easy; this.save(); }
         this.state = 'idle';
-        this.secs = this.mins * 60;
         document.getElementById('tab-bar').style.display = '';
         this.renderIdle();
     },
@@ -243,7 +254,8 @@ const App = {
     updateFill() {
         const fill = document.getElementById('fill');
         if (!fill) return;
-        const pct = 1 - (this.secs / (this.mins * 60));
+        const elapsed = Date.now() - this.startedAt;
+        const pct = elapsed / this.meditationMs;
         fill.style.height = `${Math.min(pct * 100, 100)}%`;
     },
 
