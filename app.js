@@ -34,16 +34,27 @@ const App = {
                         <div class="count-wrap"><div class="count-bar"></div><div><div class="count-num">850</div><div class="count-lbl">meditating now</div></div></div>
                         <button class="gear-btn" id="gear">⚙</button>
                     </div>
-                    <div class="bottom-row">
-                        <div><div class="dur-num" id="dur-btn">${this.mins} mins</div><div class="dur-type">TM</div></div>
+                    <div class="mid-row">
+                        <div><div class="dur-type">TM</div><div class="dur-num" id="dur-btn">${this.mins} mins</div></div>
                         <div class="toggle" id="track"><div class="thumb" id="thumb"></div></div>
                     </div>
                 </div>
                 <div class="tap-zone" id="tap"></div>
             </div>
-            <div class="picker-bg" id="picker"><div class="picker-sheet"><h3>Session Duration</h3><div class="dur-grid">${
-                [5,10,15,20,25,30].map(m=>`<button class="dur-opt${m===this.mins?' sel':''}" data-m="${m}">${m} min</button>`).join('')
-            }</div></div></div>
+            <div class="picker-bg" id="picker"><div class="picker-sheet" style="position:relative">
+                <h3>Duration (minutes)</h3>
+                <button class="picker-done" id="picker-done">Done</button>
+                <div class="scroll-wrap">
+                    <div class="scroll-mask-top"></div>
+                    <div class="scroll-mask-bot"></div>
+                    <div class="scroll-highlight"></div>
+                    <div class="scroll-list" id="scroll-list">
+                        <div style="height:80px"></div>
+                        ${Array.from({length:60},(_,i)=>`<div class="scroll-item" data-v="${i+1}">${i+1} min</div>`).join('')}
+                        <div style="height:80px"></div>
+                    </div>
+                </div>
+            </div></div>
             <div class="settings-bg" id="stg"><div class="settings-sheet"><h3>Settings</h3>
                 <div class="s-row"><label>Sessions</label><span class="s-val">${this.sessions.length}</span></div>
                 <div class="s-row"><label>Minutes</label><span class="s-val">${this.totalMins()}</span></div>
@@ -82,22 +93,41 @@ const App = {
 
         track.onclick = () => { if (this.state === 'idle') this.start(); };
 
-        document.getElementById('dur-btn').onclick = () => document.getElementById('picker').classList.add('open');
+        document.getElementById('dur-btn').onclick = () => {
+            const picker = document.getElementById('picker');
+            picker.classList.add('open');
+            const list = document.getElementById('scroll-list');
+            // Scroll to current selection (each item is 40px, need to center it)
+            list.scrollTop = (this.mins - 1) * 40 - 80;
+            this.updateScrollHighlight();
+            list.addEventListener('scroll', () => this.updateScrollHighlight());
+        };
+        document.getElementById('picker-done').onclick = () => {
+            const list = document.getElementById('scroll-list');
+            const idx = Math.round((list.scrollTop + 80) / 40);
+            this.mins = Math.max(1, Math.min(60, idx + 1));
+            this.secs = this.mins * 60;
+            document.getElementById('picker').classList.remove('open');
+            this.renderIdle();
+        };
         document.getElementById('picker').onclick = e => {
-            if (e.target.dataset.m) {
-                this.mins = parseInt(e.target.dataset.m);
-                this.secs = this.mins * 60;
-                document.getElementById('picker').classList.remove('open');
-                this.renderIdle();
-            } else if (e.target.id === 'picker') {
-                document.getElementById('picker').classList.remove('open');
-            }
+            if (e.target.id === 'picker') e.target.classList.remove('open');
         };
         document.getElementById('gear').onclick = () => document.getElementById('stg').classList.add('open');
         document.getElementById('stg').onclick = e => { if (e.target.id === 'stg') e.target.classList.remove('open'); };
         document.getElementById('clr').onclick = () => {
             if (confirm('Clear all meditation data?')) { this.sessions = []; this.save(); this.renderIdle(); this.renderStats(); }
         };
+    },
+
+    updateScrollHighlight() {
+        const list = document.getElementById('scroll-list');
+        if (!list) return;
+        const center = list.scrollTop + 100; // 100 = half of 200px wrap height
+        list.querySelectorAll('.scroll-item').forEach(el => {
+            const itemCenter = el.offsetTop + 20;
+            el.classList.toggle('active', Math.abs(itemCenter - center) < 20);
+        });
     },
 
     start() {
