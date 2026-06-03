@@ -31,7 +31,7 @@ const App = {
                 <div class="fill-wrap" id="fill">${WAVE}<div class="fill-solid"></div></div>
                 <div class="idle-ui" id="idle">
                     <div class="top-row">
-                        <div class="count-wrap"><div class="count-bar"></div><div><div class="count-num">850</div><div class="count-lbl">meditating now</div></div></div>
+                        <div></div>
                         <button class="gear-btn" id="gear">⚙</button>
                     </div>
                     <div class="mid-row">
