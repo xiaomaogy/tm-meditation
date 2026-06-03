@@ -1,4 +1,4 @@
-const CACHE = 'tm-v10';
+const CACHE = 'tm-v11';
 const ASSETS = [
     './',
     './index.html',
