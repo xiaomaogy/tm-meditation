@@ -97,14 +97,14 @@ const App = {
             const picker = document.getElementById('picker');
             picker.classList.add('open');
             const list = document.getElementById('scroll-list');
-            // Scroll to current selection (each item is 40px, need to center it)
-            list.scrollTop = (this.mins - 1) * 40 - 80;
+            // 80px top spacer, each item 40px, visible area 200px, center at 100px
+            list.scrollTop = (this.mins - 1) * 40;
             this.updateScrollHighlight();
             list.addEventListener('scroll', () => this.updateScrollHighlight());
         };
         document.getElementById('picker-done').onclick = () => {
             const list = document.getElementById('scroll-list');
-            const idx = Math.round((list.scrollTop + 80) / 40);
+            const idx = Math.round(list.scrollTop / 40);
             this.mins = Math.max(1, Math.min(60, idx + 1));
             this.secs = this.mins * 60;
             document.getElementById('picker').classList.remove('open');
@@ -123,10 +123,10 @@ const App = {
     updateScrollHighlight() {
         const list = document.getElementById('scroll-list');
         if (!list) return;
-        const center = list.scrollTop + 100; // 100 = half of 200px wrap height
-        list.querySelectorAll('.scroll-item').forEach(el => {
-            const itemCenter = el.offsetTop + 20;
-            el.classList.toggle('active', Math.abs(itemCenter - center) < 20);
+        // 80px spacer + scrollTop puts us at the right item
+        const centerIdx = Math.round(list.scrollTop / 40);
+        list.querySelectorAll('.scroll-item').forEach((el, i) => {
+            el.classList.toggle('active', i === centerIdx);
         });
     },
 
