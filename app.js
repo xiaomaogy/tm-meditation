@@ -38,7 +38,7 @@ const App = {
                 <div class="fill-wrap" id="fill">${WAVE}<div class="fill-solid"></div></div>
                 <div class="idle-ui" id="idle">
                     <div class="top-row">
-                        <div style="font-size:10px;color:#ccc;">v13</div>
+                        <div style="font-size:10px;color:#ccc;">v14</div>
                         <button class="gear-btn" id="gear">⚙</button>
                     </div>
                     <div class="mid-row">
@@ -75,6 +75,7 @@ const App = {
         document.getElementById('timer-tab').innerHTML = `
             <div class="timer-page">
                 <div class="fill-wrap" id="fill"><div class="fill-solid"></div>${WAVE}</div>
+                <div class="phase-label" id="phase-label">phase out</div>
                 <div class="tap-zone" id="tap" style="display:block"></div>
                 <div class="confirm-overlay" id="confirm" style="display:none">
                     <div class="confirm-box">
@@ -210,6 +211,8 @@ const App = {
             // Reset fill to 0 for phase out animation
             const fill = document.getElementById('fill');
             if (fill) fill.style.height = '0%';
+            const lbl = document.getElementById('phase-label');
+            if (lbl) lbl.style.opacity = '1';
 
         } else if (this.state === 'phaseout') {
             const poElapsed = Date.now() - this.phaseOutStartedAt;
