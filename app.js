@@ -176,6 +176,7 @@ const App = {
 
     stop() {
         clearInterval(this.timer);
+        clearInterval(this.phaseOutTimer);
         this.releaseWakeLock();
         this.state = 'idle';
         this.secs = this.mins * 60;
@@ -187,39 +188,32 @@ const App = {
         if (this.secs > 0) {
             this.secs--;
             this.updateFill();
-        } else {
-            clearInterval(this.timer);
+        } else if (this.state === 'running') {
+            // Meditation done — transition to phase out
+            this.state = 'phaseout';
             this.playChime();
             this.addSession(this.mins * 60);
+            this.phaseOutSecs = 3 * 60;
 
             const fill = document.getElementById('fill');
-            fill.style.height = '100%';
-            const wave = fill.querySelector('.fill-wave');
-            if (wave) wave.style.display = 'none';
-
-            this.startPhaseOut();
+            if (fill) {
+                fill.style.height = '100%';
+                const wave = fill.querySelector('.fill-wave');
+                if (wave) wave.style.display = 'none';
+            }
+        } else if (this.state === 'phaseout') {
+            if (this.phaseOutSecs > 0) {
+                this.phaseOutSecs--;
+            } else {
+                clearInterval(this.timer);
+                this.releaseWakeLock();
+                this.playChime();
+                this.showFeedback();
+            }
         }
     },
 
     phaseOutSecs: 0,
-    phaseOutTimer: null,
-
-    startPhaseOut() {
-        this.state = 'phaseout';
-        this.phaseOutSecs = 3 * 60;
-        this.phaseOutTimer = setInterval(() => this.phaseOutTick(), 1000);
-    },
-
-    phaseOutTick() {
-        if (this.phaseOutSecs > 0) {
-            this.phaseOutSecs--;
-        } else {
-            clearInterval(this.phaseOutTimer);
-            this.releaseWakeLock();
-            this.playChime();
-            this.showFeedback();
-        }
-    },
 
     showFeedback() {
         this.state = 'feedback';

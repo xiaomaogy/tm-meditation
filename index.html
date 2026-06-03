@@ -14,7 +14,8 @@
     <style>
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
         :root { --gold:#FFC436; --fill-top:#F5D882; --fill-bot:#FBF8F0; --safe-top:env(safe-area-inset-top); --safe-bottom:env(safe-area-inset-bottom); }
-        html, body { height:100%; overflow:hidden; }
+        html { height:100%; overflow:hidden; background:var(--fill-bot); }
+        body { height:100%; overflow:hidden; }
         body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif; background:var(--fill-bot); color:#2c2c2c; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
 
         #app { display:flex; flex-direction:column; height:100dvh; }
