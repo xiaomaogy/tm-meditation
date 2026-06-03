@@ -65,14 +65,34 @@ const App = {
     },
 
     renderRunning() {
-        // Replace timer-tab content with ONLY the fill — nothing else
         document.getElementById('timer-tab').innerHTML = `
             <div class="timer-page">
                 <div class="fill-wrap" id="fill"><div class="fill-solid"></div>${WAVE}</div>
                 <div class="tap-zone" id="tap" style="display:block"></div>
+                <div class="confirm-overlay" id="confirm" style="display:none">
+                    <div class="confirm-box">
+                        <div class="confirm-title">End session?</div>
+                        <div class="confirm-sub">Your meditation is still in progress.</div>
+                        <div class="confirm-btns">
+                            <button class="confirm-btn cancel" id="conf-cancel">Continue</button>
+                            <button class="confirm-btn quit" id="conf-quit">End</button>
+                        </div>
+                    </div>
+                </div>
             </div>`;
         document.getElementById('tab-bar').style.display = 'none';
-        document.getElementById('tap').onclick = () => this.stop();
+        document.getElementById('tap').onclick = () => {
+            document.getElementById('confirm').style.display = 'flex';
+        };
+        document.getElementById('conf-cancel').onclick = (e) => {
+            e.stopPropagation();
+            document.getElementById('confirm').style.display = 'none';
+        };
+        document.getElementById('conf-quit').onclick = (e) => {
+            e.stopPropagation();
+            clearInterval(this.phaseOutTimer);
+            this.stop();
+        };
     },
 
     bindTimer() {

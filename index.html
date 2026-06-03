@@ -73,6 +73,16 @@
         /* Running tap zone */
         .tap-zone { position:absolute; inset:0; z-index:3; display:none; }
 
+        /* Confirm overlay */
+        .confirm-overlay { position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.3); }
+        .confirm-box { background:#fff; border-radius:20px; padding:28px 24px; width:280px; text-align:center; }
+        .confirm-title { font-size:18px; font-weight:600; margin-bottom:8px; }
+        .confirm-sub { font-size:14px; color:#888; margin-bottom:24px; }
+        .confirm-btns { display:flex; gap:12px; }
+        .confirm-btn { flex:1; padding:14px 0; border:none; border-radius:14px; font-size:15px; font-weight:500; cursor:pointer; }
+        .confirm-btn.cancel { background:var(--gold); color:#fff; }
+        .confirm-btn.quit { background:#e8e4d8; color:#2c2c2c; }
+
         /* Feedback buttons */
         .fb-btn { padding:16px 40px; border:none; border-radius:28px; font-size:17px; font-weight:500; cursor:pointer; }
         #fb-yes { background:var(--gold); color:#fff; }
