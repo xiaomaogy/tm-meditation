@@ -38,7 +38,7 @@ const App = {
                 <div class="fill-wrap" id="fill">${WAVE}<div class="fill-solid"></div></div>
                 <div class="idle-ui" id="idle">
                     <div class="top-row">
-                        <div></div>
+                        <div style="font-size:10px;color:#ccc;">v12</div>
                         <button class="gear-btn" id="gear">⚙</button>
                     </div>
                     <div class="mid-row">
