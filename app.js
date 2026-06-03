@@ -169,8 +169,6 @@ const App = {
             this.updateFill();
         } else {
             clearInterval(this.timer);
-            this.releaseWakeLock();
-            this.state = 'finished';
             this.playChime();
             this.addSession(this.mins * 60);
 
@@ -179,13 +177,53 @@ const App = {
             const wave = fill.querySelector('.fill-wave');
             if (wave) wave.style.display = 'none';
 
-            setTimeout(() => {
-                this.state = 'idle';
-                this.secs = this.mins * 60;
-                document.getElementById('tab-bar').style.display = '';
-                this.renderIdle();
-            }, 4000);
+            this.startPhaseOut();
         }
+    },
+
+    phaseOutSecs: 0,
+    phaseOutTimer: null,
+
+    startPhaseOut() {
+        this.state = 'phaseout';
+        this.phaseOutSecs = 3 * 60;
+        this.phaseOutTimer = setInterval(() => this.phaseOutTick(), 1000);
+    },
+
+    phaseOutTick() {
+        if (this.phaseOutSecs > 0) {
+            this.phaseOutSecs--;
+        } else {
+            clearInterval(this.phaseOutTimer);
+            this.releaseWakeLock();
+            this.playChime();
+            this.showFeedback();
+        }
+    },
+
+    showFeedback() {
+        this.state = 'feedback';
+        document.getElementById('timer-tab').innerHTML = `
+            <div class="timer-page" style="display:flex;align-items:center;justify-content:center;">
+                <div style="text-align:center;padding:0 40px;">
+                    <div style="font-size:24px;font-weight:600;margin-bottom:32px;color:#2c2c2c;">Did you feel it was easy?</div>
+                    <div style="display:flex;gap:20px;justify-content:center;">
+                        <button class="fb-btn" id="fb-yes">Yes</button>
+                        <button class="fb-btn" id="fb-no">No</button>
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('fb-yes').onclick = () => this.finishSession(true);
+        document.getElementById('fb-no').onclick = () => this.finishSession(false);
+    },
+
+    finishSession(easy) {
+        const last = this.sessions[this.sessions.length - 1];
+        if (last) { last.easy = easy; this.save(); }
+        this.state = 'idle';
+        this.secs = this.mins * 60;
+        document.getElementById('tab-bar').style.display = '';
+        this.renderIdle();
     },
 
     updateFill() {
