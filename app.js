@@ -130,9 +130,24 @@ const App = {
         });
     },
 
+    wakeLock: null,
+
+    async acquireWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                this.wakeLock = await navigator.wakeLock.request('screen');
+            }
+        } catch(e) {}
+    },
+
+    releaseWakeLock() {
+        if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; }
+    },
+
     start() {
         this.state = 'running';
         this.secs = this.mins * 60;
+        this.acquireWakeLock();
         this.playChime();
         this.renderRunning();
         this.updateFill();
@@ -141,6 +156,7 @@ const App = {
 
     stop() {
         clearInterval(this.timer);
+        this.releaseWakeLock();
         this.state = 'idle';
         this.secs = this.mins * 60;
         document.getElementById('tab-bar').style.display = '';
@@ -153,6 +169,7 @@ const App = {
             this.updateFill();
         } else {
             clearInterval(this.timer);
+            this.releaseWakeLock();
             this.state = 'finished';
             this.playChime();
             this.addSession(this.mins * 60);
