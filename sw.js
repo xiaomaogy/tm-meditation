@@ -1,7 +1,9 @@
-const CACHE = 'tm-v17';
+const CACHE = 'tm-v18';
 const ASSETS = [
     './',
     './index.html',
+    './vendor/nosleep.min.js',
+    './keep-awake.js',
     './app.js',
     './manifest.json',
     './icon-192.png',

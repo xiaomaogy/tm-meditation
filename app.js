@@ -9,7 +9,12 @@ const App = {
     startedAt: 0,
     meditationMs: 0,
     phaseOutMs: 3 * 60 * 1000,
+    meditationEndsAt: 0,
+    phaseOutEndsAt: 0,
+    runId: 0,
     sessionSaved: false,
+    keepAwake: new KeepAwakeController(),
+    lifecycleBound: false,
     sessions: JSON.parse(localStorage.getItem('tm_sessions') || '[]'),
     month: new Date(),
 
@@ -17,6 +22,12 @@ const App = {
         this.renderIdle();
         this.renderStats();
         this.bindTabs();
+        if (!this.lifecycleBound) {
+            document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
+            window.addEventListener('pagehide', () => this.keepAwake.suspend());
+            window.addEventListener('pageshow', () => this.handleVisibilityChange());
+            this.lifecycleBound = true;
+        }
     },
 
     save() {
@@ -38,7 +49,7 @@ const App = {
                 <div class="fill-wrap" id="fill">${WAVE}<div class="fill-solid"></div></div>
                 <div class="idle-ui" id="idle">
                     <div class="top-row">
-                        <div style="font-size:10px;color:#ccc;">v16</div>
+                        <div style="font-size:10px;color:#ccc;">v17</div>
                         <button class="gear-btn" id="gear">⚙</button>
                     </div>
                     <div class="mid-row">
@@ -105,11 +116,24 @@ const App = {
     bindTimer() {
         const thumb = document.getElementById('thumb');
         const track = document.getElementById('track');
-        let dragY = 0, dragging = false;
+        let dragY = 0, dragging = false, startOnEnd = false;
 
-        const onStart = y => { if (this.state === 'idle') { dragging = true; dragY = y; } };
-        const onMove = y => { if (dragging && y - dragY > 40) { dragging = false; this.start(); } };
-        const onEnd = () => { dragging = false; };
+        const onStart = y => {
+            if (this.state === 'idle') {
+                dragging = true;
+                startOnEnd = false;
+                dragY = y;
+            }
+        };
+        const onMove = y => {
+            if (dragging && y - dragY > 40) startOnEnd = true;
+        };
+        const onEnd = () => {
+            const shouldStart = dragging && startOnEnd && this.state === 'idle';
+            dragging = false;
+            startOnEnd = false;
+            if (shouldStart) this.start();
+        };
 
         thumb.addEventListener('touchstart', e => { e.preventDefault(); onStart(e.touches[0].clientY); }, { passive: false });
         document.addEventListener('touchmove', e => onMove(e.touches[0].clientY));
@@ -154,36 +178,53 @@ const App = {
         });
     },
 
-    wakeLock: null,
-
-    async acquireWakeLock() {
-        try {
-            if ('wakeLock' in navigator) {
-                this.wakeLock = await navigator.wakeLock.request('screen');
-            }
-        } catch(e) {}
+    isSessionActive() {
+        return this.state === 'running' || this.state === 'phaseout';
     },
 
-    releaseWakeLock() {
-        try { if (this.wakeLock) { this.wakeLock.release(); this.wakeLock = null; } } catch(e) {}
+    clearTimer() {
+        if (this.timer !== null) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    },
+
+    handleVisibilityChange() {
+        if (document.visibilityState !== 'visible') {
+            this.keepAwake.suspend();
+            return;
+        }
+
+        if (this.isSessionActive()) this.tick();
+        if (this.isSessionActive()) this.keepAwake.resume();
     },
 
     start() {
+        if (this.state !== 'idle') return false;
+        this.clearTimer();
+        const runId = ++this.runId;
         this.state = 'running';
         this.startedAt = Date.now();
         this.meditationMs = this.mins * 60 * 1000;
+        this.meditationEndsAt = this.startedAt + this.meditationMs;
+        this.phaseOutStartedAt = this.meditationEndsAt;
+        this.phaseOutEndsAt = this.meditationEndsAt + this.phaseOutMs;
         this.sessionSaved = false;
-        this.acquireWakeLock();
+        this.keepAwake.enable();
         this.playChime();
         this.renderRunning();
         this.updateFill();
-        this.timer = setInterval(() => this.tick(), 500);
+        this.timer = setInterval(() => {
+            if (this.runId === runId) this.tick();
+        }, 500);
+        return true;
     },
 
     stop() {
-        clearInterval(this.timer);
-        this.releaseWakeLock();
         this.state = 'idle';
+        ++this.runId;
+        this.clearTimer();
+        this.keepAwake.disable();
         document.getElementById('tab-bar').style.display = '';
         this.renderIdle();
     },
@@ -191,44 +232,47 @@ const App = {
     phaseOutStartedAt: 0,
 
     tick() {
-        const elapsed = Date.now() - this.startedAt;
+        if (!this.isSessionActive()) return;
+        const now = Date.now();
 
-        if (elapsed < this.meditationMs) {
+        if (now < this.meditationEndsAt) {
             // Still meditating — fill from top
-            const pct = elapsed / this.meditationMs;
+            const pct = (now - this.startedAt) / this.meditationMs;
             const fill = document.getElementById('fill');
             if (fill) fill.style.height = `${Math.min(pct * 100, 100)}%`;
 
-        } else if (this.state === 'running') {
-            // Meditation just ended — transition to phase out
-            this.state = 'phaseout';
-            this.phaseOutStartedAt = Date.now();
-            this.playChime();
-            if (!this.sessionSaved) {
-                this.sessionSaved = true;
-                this.addSession(this.mins * 60);
-            }
-            // Reset fill to 0 for phase out animation
-            const fill = document.getElementById('fill');
-            if (fill) fill.style.height = '0%';
-            const lbl = document.getElementById('phase-label');
-            if (lbl) lbl.style.opacity = '1';
+        } else if (now >= this.phaseOutEndsAt) {
+            this.saveSessionOnce();
+            this.completeSession();
 
-        } else if (this.state === 'phaseout') {
-            const poElapsed = Date.now() - this.phaseOutStartedAt;
-            if (poElapsed < this.phaseOutMs) {
-                // Phase out — fill again from top over 3 minutes
-                const pct = poElapsed / this.phaseOutMs;
-                const fill = document.getElementById('fill');
-                if (fill) fill.style.height = `${Math.min(pct * 100, 100)}%`;
-            } else {
-                // Phase out done
-                clearInterval(this.timer);
-                this.releaseWakeLock();
-                this.playChime();
-                this.showFeedback();
-            }
+        } else {
+            if (this.state === 'running') this.enterPhaseOut();
+            const pct = (now - this.phaseOutStartedAt) / this.phaseOutMs;
+            const fill = document.getElementById('fill');
+            if (fill) fill.style.height = `${Math.min(Math.max(pct, 0) * 100, 100)}%`;
         }
+    },
+
+    saveSessionOnce() {
+        if (this.sessionSaved) return;
+        this.sessionSaved = true;
+        this.addSession(this.mins * 60);
+    },
+
+    enterPhaseOut() {
+        this.state = 'phaseout';
+        this.playChime();
+        this.saveSessionOnce();
+        const lbl = document.getElementById('phase-label');
+        if (lbl) lbl.style.opacity = '1';
+    },
+
+    completeSession() {
+        ++this.runId;
+        this.clearTimer();
+        this.keepAwake.disable();
+        this.playChime();
+        this.showFeedback();
     },
 
     showFeedback() {
@@ -251,6 +295,9 @@ const App = {
         const last = this.sessions[this.sessions.length - 1];
         if (last) { last.easy = easy; this.save(); }
         this.state = 'idle';
+        ++this.runId;
+        this.clearTimer();
+        this.keepAwake.disable();
         document.getElementById('tab-bar').style.display = '';
         this.renderIdle();
     },
